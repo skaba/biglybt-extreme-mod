@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+
+######## CONFIGURATION OPTIONS ########
+AUTOUPDATE_SCRIPT=1 # change to 0 if you don't want your changes overwritten on next SCRIPT_VERSION change
+PROGRAM_DIR="${SNAP}/opt/biglybt"	# use full path to BiglyBT bin dir
+JAVA_PROPS=""
+
+#######################################
+
+######## YOU PROBABLY DO NOT WANT TO TOUCH ANYTHING BELOW! ########
+
+SCRIPT_VERSION=12
+START_CLASS="com.biglybt.ui.Main"
+
+MSG_LOADING="Loading BiglyBT:"
+MSG_STARTING="Starting BiglyBT..."
+MSG_AZEXIT="Exit from BiglyBT complete"
+MSG_TERMINATED="BiglyBT TERMINATED."
+
+JAVA_ARGS=$(grep -o '^[^#]*' ~/.biglybt/java.vmoptions 2>/dev/null | tr '\n' ' ')
+
+JAVA_ARGS="${JAVA_ARGS} --patch-module=java.base=ghostfucker_utils.jar --add-exports=java.base/sun.net.www.protocol=ALL-UNNAMED --add-exports=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-exports=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED -Dorg.glassfish.jaxb.runtime.v2.bytecode.ClassTailor.noOptimize=true"
+
+runJavaOutput()
+{
+	# assume we can write to the user's home..
+
+	RESULT=`$JAVABIN \
+		-cp "${CLASSPATH}" \
+		"-Djava.library.path=${SNAP}/usr/lib/jni" \
+		"-Dazureus.install.path=${PROGRAM_DIR}" \
+		"-Dazureus.script=$0" \
+		"-Dawt.useSystemAAFontSettings=gasp" \
+		${JAVA_PROPS} \
+		${JAVA_ARGS} \
+		"$@"`
+	if [ ! "$RESULT" = "" ]; then
+		eval "${RESULT}"
+	fi
+}
+
+exists () {
+  type "$1" >/dev/null 2>/dev/null
+}
+
+
+echo "$MSG_STARTING"
+
+# get the app dir if not already defined
+if [ -z "$PROGRAM_DIR" ]; then
+		PROGRAM_DIR=$(dirname "$0")
+		PROGRAM_DIR=$(cd "$PROGRAM_DIR"; pwd)
+elif [ ! -f "${PROGRAM_DIR}/BiglyBT.jar" ]; then
+	echo "Unable to locate BiglyBT.jar in $PROGRAM_DIR, aborting!"
+	exit 1
+fi
+
+OLDPATH=$PWD
+
+# Change path here so we can do for loop on program dirs with spaces
+cd "${PROGRAM_DIR}" || exit
+
+# build the classpath
+
+SHARED_JAR_CHECK_DIRS="/usr/share/java /usr/local/share/java ${LOCALBASE}/share/java"
+for JNADIR in $SHARED_JAR_CHECK_DIRS; do
+	if [ -f "${JNADIR}/jna.jar" ]; then
+		CLASSPATH="${CLASSPATH:+${CLASSPATH}:}${JNADIR}/jna.jar"
+		break
+	fi
+done
+
+CLASSPATH="${PROGRAM_DIR}/BiglyBT.jar:${PROGRAM_DIR}/ghostfucker_utils.jar:${SNAP}/usr/share/java/swt4.jar:${SNAP}/usr/share/java/commons-cli.jar"
+
+# setup Java System Properties (no spaces in values)
+JAVA_PROPS="${JAVA_PROPS} -Dazureus.script.version=${SCRIPT_VERSION}"
+
+runJavaOutput "com.biglybt.platform.unix.ScriptBeforeStartup" "$@";
+
+echo "$MSG_LOADING"
+
+# Don't use "exec -a BiglyBT ..." here as exec quits this script after completion,
+# preventing ScriptAfterShutdown from running, which installs updates and does
+# restarts
+$JAVABIN -Xmx256m \
+	-cp "${CLASSPATH}" \
+	"-Djava.library.path=${SNAP}/usr/lib/jni" \
+	"-Dazureus.install.path=${PROGRAM_DIR}" \
+	"-Dazureus.script=$0" \
+	${JAVA_PROPS} \
+	${JAVA_ARGS} \
+	${START_CLASS} \
+	${OTHER_PARAMS} \
+	"$@"
+
+echo "$MSG_AZEXIT"
+
+runJavaOutput "com.biglybt.platform.unix.ScriptAfterShutdown" "$@";
+
+echo "$MSG_TERMINATED"

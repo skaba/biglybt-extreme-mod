@@ -1,0 +1,133 @@
+name: biglybt-extreme-mod
+title: BiglyBT Extreme Mod
+version: '3.6.0.0'
+summary: A modded version of the BiglyBT client with multiple spoofing capabilities
+description: A modded version of the BiglyBT client with multiple spoofing capabilities
+license: GPL-3.0
+grade: stable
+base: core24
+confinement: classic
+platforms:
+  amd64:
+
+#package-repositories:
+#  - type: apt
+#    components: [main]
+#    suites: [stable]
+#    key-id: 99A5C88E3C5B1FA8B05A19D332E9750179FCEA62
+#    url: https://apt.bell-sw.com/
+
+#plugs:
+  #dot-biglybt:
+  #  interface: personal-files
+  #  write:
+  #  - $HOME/.biglybt
+  #dot-swt:
+  #  interface: personal-files
+  #  write:
+  #  - $HOME/.swt/lib/linux/x86_64/libswt-gtk-4962r3.so
+
+apps:
+  biglybt:
+    environment:
+      JAVA_HOME: $SNAP/usr/lib/jvm/java-21-openjdk-$SNAP_ARCH
+      PATH: $JAVA_HOME/bin:$SNAP/opt/biglybt:$PATH
+      JAVABIN: $JAVA_HOME/bin/java
+      GDK_BACKEND: x11
+      FT2_SUBPIXEL_HINTING: 2
+    command: opt/biglybt/biglybt
+    desktop: opt/biglybt/biglybt.desktop
+    #extensions:
+    #  - gnome
+    plugs:
+      #- home
+      #- network
+      #- network-bind
+      #- network-control
+      - desktop
+      - desktop-legacy
+      - x11
+      #- hugepages-control
+      #- system-observe
+      #- mount-observe
+      #- dot-biglybt
+      #- dot-swt
+
+parts:
+
+  biglybt:
+    plugin: dump
+    source:  https://github.com/BiglySoftware/BiglyBT/releases/download/v3.6.0.0/GitHub_BiglyBT_unix.tar.gz
+    #source: GitHub_BiglyBT_unix.tar.gz
+    organize:
+      #swt: opt/biglybt/swt
+      plugins: opt/biglybt/plugins
+      'biglybt*.*': opt/biglybt/
+      '*.txt': opt/biglybt/
+      #commons-cli.jar: opt/biglybt/
+
+#    override-pull: |
+#     craftctl default
+#     craftctl set version=$(mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | sed -n -e '/^\[.*\]/ !{ /^[0-9]/ { p; q } }')-$(git rev-parse --short HEAD)
+
+#    build-packages:
+#      - bellsoft-java22
+#      - maven
+
+    override-build: |
+      craftctl default
+      rm -v $CRAFT_PART_INSTALL/*BiglyBT
+      rm -v $CRAFT_PART_INSTALL/BiglyBT.jar
+      rm -v $CRAFT_PART_INSTALL/commons-cli.jar
+      rm -v $CRAFT_PART_INSTALL/biglybt
+      rm -Rfv $CRAFT_PART_INSTALL/swt
+      #mkdir -p $CRAFT_PART_INSTALL/opt/biglybt
+      #mv -v $CRAFT_PART_INSTALL/{plugins,swt} $CRAFT_PART_INSTALL/opt/biglybt
+      #mv -v biglybt* $CRAFT_PART_INSTALL/opt/biglybt/
+      # mv $CRAFT_PART_INSTALL/jar/ravikoodi-app-*.jar $CRAFT_PART_INSTALL/jar/ravikoodi.jar
+      # cp ravikoodi.desktop $CRAFT_PART_INSTALL/
+      # cp ravikoodi-logo-1024.png $CRAFT_PART_INSTALL/
+      # cp snap/bin/ravikoodi-launcher $CRAFT_PART_INSTALL/usr/bin/ravikoodi
+
+    stage-packages:
+      - openjdk-21-jre
+      - libswt-gtk-4-java
+      - libswt-cairo-gtk-4-jni
+      - libswt-webkit-gtk-4-jni
+      - libcommons-cli-java
+
+  biglybt-extreme-mod:
+    plugin: dump
+    source:  https://www.sb-innovation.de/attachment.php?attachmentid=21721&d=1714038257
+    #source: BiglyBT_3.6.0.0_20240425.zip
+    organize:
+      clientfiles: opt/biglybt/clientfiles
+      '*.jar': opt/biglybt/
+      BiglyBTSpoof.properties: opt/biglybt/BiglyBTSpoof.properties
+
+#    override-pull: |
+#     craftctl default
+#     craftctl set version=$(mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | sed -n -e '/^\[.*\]/ !{ /^[0-9]/ { p; q } }')-$(git rev-parse --short HEAD)
+
+#    build-packages:
+#      - bellsoft-java22
+#      - maven
+
+    override-build: |
+      craftctl default
+      rm *.zip
+      #cp launcher/biglybt $CRAFT_PART_INSTALL/opt/biglybt/
+
+    stage-packages:
+      - openjdk-21-jre
+      - libswt-gtk-4-java
+      - libswt-cairo-gtk-4-jni
+      - libswt-webkit-gtk-4-jni
+      - libcommons-cli-java
+
+  launcher:
+    plugin: dump
+    source: launcher
+    source-type: local
+    organize:
+      biglybt: opt/biglybt/
